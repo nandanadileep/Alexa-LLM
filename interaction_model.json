@@ -1,0 +1,65 @@
+{
+  "interactionModel": {
+    "languageModel": {
+      "invocationName": "claude assistant",
+      "intents": [
+        {
+          "name": "AskClaudeIntent",
+          "slots": [
+            {
+              "name": "query",
+              "type": "AMAZON.SearchQuery"
+            }
+          ],
+          "samples": [
+            "ask {query}",
+            "tell me {query}",
+            "what is {query}",
+            "what are {query}",
+            "how to {query}",
+            "how do I {query}",
+            "how does {query}",
+            "explain {query}",
+            "why is {query}",
+            "why do {query}",
+            "can you {query}",
+            "help me with {query}",
+            "answer {query}",
+            "I want to know {query}",
+            "I have a question about {query}",
+            "search for {query}",
+            "look up {query}",
+            "find {query}",
+            "what do you think about {query}",
+            "give me advice on {query}",
+            "help me understand {query}",
+            "what should I {query}",
+            "tell me about {query}",
+            "who is {query}",
+            "where is {query}",
+            "when did {query}",
+            "please {query}",
+            "could you {query}",
+            "I need help with {query}"
+          ]
+        },
+        {
+          "name": "AMAZON.HelpIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.StopIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.CancelIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.FallbackIntent",
+          "samples": []
+        }
+      ]
+    }
+  }
+}
