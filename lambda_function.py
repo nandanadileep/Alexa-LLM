@@ -9,6 +9,8 @@ Set the LLM_PROVIDER environment variable to switch backends:
 import json
 import os
 
+from dynamo import get_history, save_history
+
 LLM_PROVIDER = os.environ.get("LLM_PROVIDER", "groq").lower()
 
 if LLM_PROVIDER == "gemini":
@@ -58,8 +60,8 @@ def handle_ask_intent(event):
     if not user_query:
         return build_response("I didn't catch that. Could you ask your question again?")
 
-    session_attributes = event.get("session", {}).get("attributes") or {}
-    conversation_history = session_attributes.get("conversationHistory", [])
+    user_id = event["session"]["user"]["userId"]
+    conversation_history = get_history(user_id)
 
     try:
         llm_response = ask_llm(user_query, conversation_history)
@@ -68,12 +70,9 @@ def handle_ask_intent(event):
             {"role": "user", "content": user_query},
             {"role": "assistant", "content": llm_response},
         ]
-        updated_history = updated_history[-6:]
+        save_history(user_id, updated_history)
 
-        return build_response(
-            llm_response,
-            {"conversationHistory": updated_history},
-        )
+        return build_response(llm_response)
 
     except Exception as e:
         print(f"Error calling LLM: {e}")
