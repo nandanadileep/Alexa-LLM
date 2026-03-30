@@ -46,7 +46,22 @@
             "I have {query}",
             "I think {query}",
             "I want {query}",
-            "I need {query}"
+            "I need {query}",
+            "which {query}",
+            "who {query}",
+            "where {query}",
+            "when {query}",
+            "what {query}",
+            "how {query}",
+            "why {query}",
+            "is {query}",
+            "are {query}",
+            "do {query}",
+            "does {query}",
+            "did {query}",
+            "can {query}",
+            "should {query}",
+            "would {query}"
           ]
         },
         {
