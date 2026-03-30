@@ -83,6 +83,23 @@ def handle_ask_intent(event):
         )
 
 
+def handle_yes_no_intent(event, word):
+    user_id = event["session"]["user"]["userId"]
+    conversation_history = get_history(user_id)
+
+    try:
+        llm_response = ask_llm(word, conversation_history)
+        updated_history = conversation_history + [
+            {"role": "user", "content": word},
+            {"role": "assistant", "content": llm_response},
+        ]
+        save_history(user_id, updated_history)
+        return build_response(llm_response)
+    except Exception as e:
+        print(f"Error calling LLM: {e}")
+        return build_response("Sorry, I had trouble getting a response. Please try again in a moment.")
+
+
 def handle_launch_request():
     return build_response("Hey! I'm your AI-powered assistant. Ask me anything.")
 
@@ -121,6 +138,10 @@ def lambda_handler(event, context):
 
         if intent_name == "AskClaudeIntent":
             return handle_ask_intent(event)
+        elif intent_name == "AMAZON.YesIntent":
+            return handle_yes_no_intent(event, "yes")
+        elif intent_name == "AMAZON.NoIntent":
+            return handle_yes_no_intent(event, "no")
         elif intent_name == "AMAZON.HelpIntent":
             return handle_help_intent()
         elif intent_name in ("AMAZON.StopIntent", "AMAZON.CancelIntent"):

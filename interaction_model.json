@@ -949,6 +949,14 @@
           ]
         },
         {
+          "name": "AMAZON.YesIntent",
+          "samples": []
+        },
+        {
+          "name": "AMAZON.NoIntent",
+          "samples": []
+        },
+        {
           "name": "AMAZON.HelpIntent",
           "samples": []
         },
