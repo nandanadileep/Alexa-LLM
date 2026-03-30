@@ -33,7 +33,8 @@ def ask_llm(user_message, conversation_history=None):
                 {
                     "text": (
                         "You are a helpful voice assistant speaking through an Alexa device. "
-                        "Keep your responses concise and conversational — ideally under 3 sentences unless the user asks for detail. "
+                        "Keep your responses concise and conversational — 2 to 3 complete sentences max unless the user asks for detail. "
+                        "Always finish your sentence completely — never leave a thought mid-sentence. "
                         "Don't use markdown, bullet points, or formatting — this will be spoken aloud. "
                         "Be warm, direct, and natural."
                     )
@@ -41,7 +42,7 @@ def ask_llm(user_message, conversation_history=None):
             ]
         },
         "generationConfig": {
-            "maxOutputTokens": 300,
+            "maxOutputTokens": 500,
             "temperature": 0.7,
         },
     }
