@@ -25,7 +25,7 @@ def ask_llm(user_message, conversation_history=None):
     messages = [system_message] + conversation_history + [{"role": "user", "content": user_message}]
 
     payload = {
-        "model": "mistralai/mistral-7b-instruct:free",
+        "model": "google/gemma-3-27b-it:free",
         "max_tokens": 300,
         "temperature": 0.7,
         "messages": messages,
