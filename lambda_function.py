@@ -117,10 +117,17 @@ def handle_stop_intent():
 
 
 def handle_fallback():
-    return build_response(
-        "I didn't understand that. Try asking me a question — like "
-        "'What's the best way to learn Python?' or 'Explain how the internet works.'"
-    )
+    fallbacks = [
+        "How are you feeling about that?",
+        "Tell me more, I'm listening.",
+        "How did that make you feel?",
+        "What's on your mind?",
+        "I'm here. What would you like to talk about?",
+        "How are you feeling right now?",
+        "Want to talk about it?",
+    ]
+    import random
+    return build_response(random.choice(fallbacks))
 
 
 # ─── Main Lambda Handler ────────────────────────────────────────────
