@@ -15,6 +15,8 @@ LLM_PROVIDER = os.environ.get("LLM_PROVIDER", "groq").lower()
 
 if LLM_PROVIDER == "gemini":
     from gemini_provider import ask_llm
+elif LLM_PROVIDER == "openrouter":
+    from openrouter_provider import ask_llm
 else:
     from groq_provider import ask_llm
 
