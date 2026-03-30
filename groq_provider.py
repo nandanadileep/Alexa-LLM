@@ -25,7 +25,7 @@ def ask_llm(user_message, conversation_history=None):
     messages = [system_message] + conversation_history + [{"role": "user", "content": user_message}]
 
     payload = {
-        "model": "llama-3.3-70b-versatile",
+        "model": "llama-3.1-8b-instant",
         "max_tokens": 300,
         "temperature": 0.7,
         "messages": messages,

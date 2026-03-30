@@ -40,7 +40,13 @@
             "when did {query}",
             "please {query}",
             "could you {query}",
-            "I need help with {query}"
+            "I need help with {query}",
+            "I am {query}",
+            "I'm {query}",
+            "I have {query}",
+            "I think {query}",
+            "I want {query}",
+            "I need {query}"
           ]
         },
         {
