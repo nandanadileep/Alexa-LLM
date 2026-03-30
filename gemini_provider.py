@@ -47,7 +47,7 @@ def ask_llm(user_message, conversation_history=None):
     }
 
     url = (
-        f"https://generativelanguage.googleapis.com/v1/models/"
+        f"https://generativelanguage.googleapis.com/v1beta/models/"
         f"gemini-1.5-flash:generateContent?key={api_key}"
     )
 
