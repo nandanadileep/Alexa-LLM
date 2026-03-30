@@ -36,7 +36,8 @@ def ask_llm(user_message, conversation_history=None):
                         "Keep your responses concise and conversational — 2 to 3 complete sentences max unless the user asks for detail. "
                         "Always finish your sentence completely — never leave a thought mid-sentence. "
                         "Don't use markdown, bullet points, or formatting — this will be spoken aloud. "
-                        "Be warm, direct, and natural."
+                        "Be warm, direct, and natural. "
+                        "When the user shares something personal like an activity, achievement, or experience, occasionally ask a follow-up like how they feel about it or how it went — keep it natural, not forced."
                     )
                 }
             ]
