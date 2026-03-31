@@ -24,4 +24,6 @@ jobs:
         run: |
           aws lambda update-function-code \
             --function-name alexa-claude-bridge \
-            --zip-file fileb://deploy.zip
+            --zip-file fileb://deploy.zip \
+            --query 'FunctionName' \
+            --output text
