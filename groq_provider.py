@@ -4,7 +4,7 @@ import urllib.request
 import urllib.error
 
 
-def ask_llm(user_message, conversation_history=None):
+def ask_llm(user_message, conversation_history=None, user_context=None):
     if conversation_history is None:
         conversation_history = []
 
@@ -12,14 +12,18 @@ def ask_llm(user_message, conversation_history=None):
     if not api_key:
         raise ValueError("GROQ_API_KEY environment variable not set")
 
+    system_content = (
+        "You are a helpful voice assistant speaking through an Alexa device. "
+        "Keep your responses concise and conversational — ideally under 3 sentences unless the user asks for detail. "
+        "Don't use markdown, bullet points, or formatting — this will be spoken aloud. "
+        "Be warm, direct, and natural."
+    )
+    if user_context:
+        system_content += f" The user has shared some personal context: {user_context}. Only use this if it is directly relevant to what they are asking — do not reference it otherwise."
+
     system_message = {
         "role": "system",
-        "content": (
-            "You are a helpful voice assistant speaking through an Alexa device. "
-            "Keep your responses concise and conversational — ideally under 3 sentences unless the user asks for detail. "
-            "Don't use markdown, bullet points, or formatting — this will be spoken aloud. "
-            "Be warm, direct, and natural."
-        ),
+        "content": system_content,
     }
 
     messages = [system_message] + conversation_history + [{"role": "user", "content": user_message}]

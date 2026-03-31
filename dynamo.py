@@ -18,7 +18,28 @@ def get_history(user_id):
 
 
 def save_history(user_id, history):
-    _get_table().put_item(Item={
-        "userId": user_id,
-        "history": history,
-    })
+    _get_table().update_item(
+        Key={"userId": user_id},
+        UpdateExpression="SET history = :h",
+        ExpressionAttributeValues={":h": history},
+    )
+
+
+def get_user_context(user_id):
+    response = _get_table().get_item(Key={"userId": user_id})
+    return response.get("Item", {}).get("userContext", "")
+
+
+def save_user_context(user_id, context):
+    _get_table().update_item(
+        Key={"userId": user_id},
+        UpdateExpression="SET userContext = :c",
+        ExpressionAttributeValues={":c": context},
+    )
+
+
+def clear_user_context(user_id):
+    _get_table().update_item(
+        Key={"userId": user_id},
+        UpdateExpression="REMOVE userContext",
+    )

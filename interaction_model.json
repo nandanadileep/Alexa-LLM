@@ -1703,6 +1703,52 @@
           ]
         },
         {
+          "name": "SetContextIntent",
+          "slots": [
+            {
+              "name": "context",
+              "type": "AMAZON.SearchQuery"
+            }
+          ],
+          "samples": [
+            "remember that {context}",
+            "remember {context}",
+            "keep in mind that {context}",
+            "keep in mind {context}",
+            "note that {context}",
+            "just so you know {context}",
+            "for context {context}",
+            "my context is {context}",
+            "set my context to {context}",
+            "update my context to {context}",
+            "I want you to know that {context}",
+            "I want you to know {context}",
+            "you should know that {context}",
+            "you should know {context}",
+            "by the way {context}",
+            "also know that {context}",
+            "save this {context}",
+            "store this {context}"
+          ]
+        },
+        {
+          "name": "ClearContextIntent",
+          "samples": [
+            "forget my context",
+            "clear my context",
+            "reset my context",
+            "delete my context",
+            "forget what you know about me",
+            "clear my profile",
+            "reset my profile",
+            "forget my profile",
+            "erase my context",
+            "remove my personal context",
+            "start fresh",
+            "clear everything you know about me"
+          ]
+        },
+        {
           "name": "AMAZON.YesIntent",
           "samples": []
         },

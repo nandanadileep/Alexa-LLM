@@ -9,7 +9,7 @@ Set the LLM_PROVIDER environment variable to switch backends:
 import json
 import os
 
-from dynamo import get_history, save_history
+from dynamo import get_history, save_history, get_user_context, save_user_context, clear_user_context
 
 LLM_PROVIDER = os.environ.get("LLM_PROVIDER", "groq").lower()
 
@@ -64,9 +64,10 @@ def handle_ask_intent(event):
 
     user_id = event["session"]["user"]["userId"]
     conversation_history = get_history(user_id)
+    user_context = get_user_context(user_id)
 
     try:
-        llm_response = ask_llm(user_query, conversation_history)
+        llm_response = ask_llm(user_query, conversation_history, user_context)
 
         updated_history = conversation_history + [
             {"role": "user", "content": user_query},
@@ -86,9 +87,10 @@ def handle_ask_intent(event):
 def handle_yes_no_intent(event, word):
     user_id = event["session"]["user"]["userId"]
     conversation_history = get_history(user_id)
+    user_context = get_user_context(user_id)
 
     try:
-        llm_response = ask_llm(word, conversation_history)
+        llm_response = ask_llm(word, conversation_history, user_context)
         updated_history = conversation_history + [
             {"role": "user", "content": word},
             {"role": "assistant", "content": llm_response},
@@ -98,6 +100,24 @@ def handle_yes_no_intent(event, word):
     except Exception as e:
         print(f"Error calling LLM: {e}")
         return build_response("Sorry, I had trouble getting a response. Please try again in a moment.")
+
+
+def handle_set_context_intent(event):
+    slots = event["request"].get("intent", {}).get("slots", {})
+    context_text = slots.get("context", {}).get("value")
+
+    if not context_text:
+        return build_response("I didn't catch that. Try saying something like, remember that I'm a software engineer who prefers short answers.")
+
+    user_id = event["session"]["user"]["userId"]
+    save_user_context(user_id, context_text)
+    return build_response(f"Got it. I'll keep that in mind going forward.")
+
+
+def handle_clear_context_intent(event):
+    user_id = event["session"]["user"]["userId"]
+    clear_user_context(user_id)
+    return build_response("Done. I've cleared your personal context.")
 
 
 def handle_launch_request():
@@ -145,6 +165,10 @@ def lambda_handler(event, context):
 
         if intent_name == "AskClaudeIntent":
             return handle_ask_intent(event)
+        elif intent_name == "SetContextIntent":
+            return handle_set_context_intent(event)
+        elif intent_name == "ClearContextIntent":
+            return handle_clear_context_intent(event)
         elif intent_name == "AMAZON.YesIntent":
             return handle_yes_no_intent(event, "yes")
         elif intent_name == "AMAZON.NoIntent":

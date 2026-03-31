@@ -4,7 +4,7 @@ import urllib.request
 import urllib.error
 
 
-def ask_llm(user_message, conversation_history=None):
+def ask_llm(user_message, conversation_history=None, user_context=None):
     if conversation_history is None:
         conversation_history = []
 
@@ -26,20 +26,20 @@ def ask_llm(user_message, conversation_history=None):
         "parts": [{"text": user_message}],
     })
 
+    system_text = (
+        "You are a helpful voice assistant speaking through an Alexa device. "
+        "Keep your responses concise and conversational — 2 to 3 complete sentences max unless the user asks for detail. "
+        "Always finish your sentence completely — never leave a thought mid-sentence. "
+        "Don't use markdown, bullet points, or formatting — this will be spoken aloud. "
+        "Be warm, direct, and natural."
+    )
+    if user_context:
+        system_text += f" The user has shared some personal context: {user_context}. Only use this if it is directly relevant to what they are asking — do not reference it otherwise."
+
     payload = {
         "contents": contents,
         "systemInstruction": {
-            "parts": [
-                {
-                    "text": (
-                        "You are a helpful voice assistant speaking through an Alexa device. "
-                        "Keep your responses concise and conversational — 2 to 3 complete sentences max unless the user asks for detail. "
-                        "Always finish your sentence completely — never leave a thought mid-sentence. "
-                        "Don't use markdown, bullet points, or formatting — this will be spoken aloud. "
-                        "Be warm, direct, and natural."
-                    )
-                }
-            ]
+            "parts": [{"text": system_text}]
         },
         "generationConfig": {
             "maxOutputTokens": 500,
