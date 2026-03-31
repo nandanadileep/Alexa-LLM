@@ -121,7 +121,7 @@ def handle_clear_context_intent(event):
 
 
 def handle_launch_request():
-    return build_response("Hey! I'm your AI-powered assistant. Ask me anything.")
+    return build_response("Hey! I'm Kimi. Ask me anything.")
 
 
 def handle_help_intent():
