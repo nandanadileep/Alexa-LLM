@@ -256,6 +256,68 @@
       line-height: 1.65;
     }
 
+    /* ── Comparison ── */
+    .compare {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+    }
+
+    .compare-col {
+      background: var(--bg);
+      padding: 28px;
+    }
+
+    .compare-col.highlight {
+      background: #111;
+    }
+
+    .compare-header {
+      font-size: 11.5px;
+      font-weight: 600;
+      letter-spacing: 0.4px;
+      text-transform: uppercase;
+      color: var(--faint);
+      margin-bottom: 20px;
+    }
+
+    .compare-col.highlight .compare-header {
+      color: rgba(255,255,255,0.4);
+    }
+
+    .compare-item {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      margin-bottom: 14px;
+      font-size: 13.5px;
+      color: var(--muted);
+      line-height: 1.5;
+    }
+
+    .compare-item:last-child { margin-bottom: 0; }
+
+    .compare-col.highlight .compare-item {
+      color: rgba(255,255,255,0.75);
+    }
+
+    .compare-item::before {
+      content: '×';
+      font-size: 13px;
+      color: var(--faint);
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    .compare-col.highlight .compare-item::before {
+      content: '✓';
+      color: rgba(255,255,255,0.5);
+    }
+
     /* ── Steps ── */
     .steps {
       border: 1px solid var(--border);
@@ -335,6 +397,7 @@
       .demo-wrap { padding: 0 24px; margin-bottom: 72px; }
       .section { padding: 0 24px 72px; }
       .features { grid-template-columns: 1fr; }
+      .compare { grid-template-columns: 1fr; }
       .step { grid-template-columns: 48px 1fr; }
       footer { padding: 24px; flex-direction: column; gap: 6px; }
     }
@@ -388,6 +451,28 @@
     </div>
   </div>
 </div>
+
+<section class="section" id="compare">
+  <p class="eyebrow">How it's different</p>
+  <div class="compare">
+    <div class="compare-col">
+      <p class="compare-header">Normal Alexa</p>
+      <div class="compare-item">Gives scripted answers from a fixed database</div>
+      <div class="compare-item">Forgets what you said the moment you say something new</div>
+      <div class="compare-item">Has no idea who you are or what you care about</div>
+      <div class="compare-item">Falls back to a web search or says it can't help</div>
+      <div class="compare-item">Can't reason through something with you</div>
+    </div>
+    <div class="compare-col highlight">
+      <p class="compare-header">My Assistant</p>
+      <div class="compare-item">Thinks through your question and gives a real answer</div>
+      <div class="compare-item">Holds the full conversation in context — follow-ups just work</div>
+      <div class="compare-item">Remembers what you tell it, uses it only when relevant</div>
+      <div class="compare-item">Handles the question even if it's vague, personal, or open-ended</div>
+      <div class="compare-item">Talks with you, not at you</div>
+    </div>
+  </div>
+</section>
 
 <section class="section" id="features">
   <p class="eyebrow">Features</p>
