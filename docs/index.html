@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Assistant — Your Alexa, Upgraded</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #F9F9F8;
+      --surface: #F2F2F0;
+      --border: #E6E6E3;
+      --text: #111111;
+      --muted: #6B6B68;
+      --faint: #A0A09C;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      -webkit-font-smoothing: antialiased;
+      line-height: 1.6;
+    }
+
+    /* ── Nav ── */
+    nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 22px 48px;
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      background: rgba(249,249,248,0.92);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      z-index: 100;
+    }
+
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      text-decoration: none;
+      color: var(--text);
+      font-size: 14px;
+      font-weight: 500;
+      letter-spacing: -0.2px;
+    }
+
+    .logo-mark {
+      width: 22px;
+      height: 22px;
+      background: var(--text);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .logo-mark svg {
+      width: 12px;
+      height: 12px;
+    }
+
+    nav a.nav-link {
+      font-size: 13px;
+      color: var(--muted);
+      text-decoration: none;
+      transition: color 0.15s;
+    }
+    nav a.nav-link:hover { color: var(--text); }
+
+    /* ── Hero ── */
+    .hero {
+      max-width: 700px;
+      margin: 0 auto;
+      padding: 110px 48px 80px;
+      text-align: center;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 11.5px;
+      font-weight: 500;
+      letter-spacing: 0.4px;
+      text-transform: uppercase;
+      color: var(--muted);
+      border: 1px solid var(--border);
+      border-radius: 100px;
+      padding: 5px 13px;
+      margin-bottom: 36px;
+    }
+
+    .badge-dot {
+      width: 6px;
+      height: 6px;
+      background: #22c55e;
+      border-radius: 50%;
+    }
+
+    h1 {
+      font-size: clamp(38px, 5.5vw, 60px);
+      font-weight: 500;
+      letter-spacing: -2px;
+      line-height: 1.06;
+      margin-bottom: 22px;
+    }
+
+    h1 .dim { color: var(--faint); }
+
+    .hero-sub {
+      font-size: 17px;
+      color: var(--muted);
+      line-height: 1.7;
+      max-width: 480px;
+      margin: 0 auto 40px;
+      font-weight: 400;
+    }
+
+    .cta-row {
+      display: flex;
+      gap: 10px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      display: inline-block;
+      padding: 11px 24px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 500;
+      text-decoration: none;
+      transition: opacity 0.15s, border-color 0.15s;
+    }
+
+    .btn-dark {
+      background: var(--text);
+      color: #fff;
+    }
+    .btn-dark:hover { opacity: 0.82; }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--muted);
+      border: 1px solid var(--border);
+    }
+    .btn-ghost:hover { border-color: #bbb; color: var(--text); }
+
+    /* ── Demo card ── */
+    .demo-wrap {
+      max-width: 580px;
+      margin: 0 auto 100px;
+      padding: 0 48px;
+    }
+
+    .demo-card {
+      background: white;
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 4px 16px rgba(0,0,0,0.04);
+    }
+
+    .demo-bar {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 11px 18px;
+      display: flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .dot { width: 9px; height: 9px; border-radius: 50%; }
+    .dot-r { background: #ff6058; }
+    .dot-y { background: #ffbd2e; }
+    .dot-g { background: #28ca42; }
+
+    .demo-body { padding: 24px 28px; display: flex; flex-direction: column; gap: 18px; }
+
+    .msg { display: flex; gap: 11px; align-items: flex-start; }
+
+    .msg-who {
+      font-size: 10.5px;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      color: var(--faint);
+      min-width: 58px;
+      padding-top: 3px;
+    }
+
+    .msg-text {
+      font-size: 14px;
+      color: var(--text);
+      line-height: 1.6;
+    }
+
+    .msg-divider { height: 1px; background: var(--border); }
+
+    /* ── Sections shared ── */
+    .section {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 0 48px 100px;
+    }
+
+    .eyebrow {
+      font-size: 11.5px;
+      font-weight: 500;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      color: var(--faint);
+      margin-bottom: 40px;
+    }
+
+    /* ── Features ── */
+    .features {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 2px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+    }
+
+    .feat {
+      background: var(--bg);
+      padding: 30px 28px;
+    }
+
+    .feat-glyph {
+      font-size: 17px;
+      margin-bottom: 14px;
+      opacity: 0.7;
+    }
+
+    .feat h3 {
+      font-size: 14px;
+      font-weight: 500;
+      letter-spacing: -0.2px;
+      margin-bottom: 7px;
+    }
+
+    .feat p {
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.65;
+    }
+
+    /* ── Steps ── */
+    .steps {
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+    }
+
+    .step {
+      display: grid;
+      grid-template-columns: 64px 1fr;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg);
+      transition: background 0.12s;
+    }
+    .step:last-child { border-bottom: none; }
+    .step:hover { background: var(--surface); }
+
+    .step-n {
+      display: flex;
+      align-items: flex-start;
+      justify-content: center;
+      padding: 26px 0 0;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--faint);
+      border-right: 1px solid var(--border);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .step-body {
+      padding: 24px 28px;
+    }
+
+    .step-body h3 {
+      font-size: 14px;
+      font-weight: 500;
+      margin-bottom: 7px;
+      letter-spacing: -0.1px;
+    }
+
+    .step-body p {
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+
+    code {
+      font-family: 'SF Mono', ui-monospace, 'Fira Code', monospace;
+      font-size: 12.5px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      padding: 1px 6px;
+      border-radius: 5px;
+      color: var(--text);
+    }
+
+    /* ── Footer ── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 28px 48px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    footer span, footer a {
+      font-size: 13px;
+      color: var(--faint);
+      text-decoration: none;
+    }
+    footer a:hover { color: var(--muted); }
+
+    /* ── Responsive ── */
+    @media (max-width: 720px) {
+      nav { padding: 18px 24px; }
+      .hero { padding: 72px 24px 60px; }
+      .demo-wrap { padding: 0 24px; margin-bottom: 72px; }
+      .section { padding: 0 24px 72px; }
+      .features { grid-template-columns: 1fr; }
+      .step { grid-template-columns: 48px 1fr; }
+      footer { padding: 24px; flex-direction: column; gap: 6px; }
+    }
+  </style>
+</head>
+<body>
+
+<nav>
+  <a href="#" class="logo">
+    <span class="logo-mark">
+      <svg viewBox="0 0 12 12" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="6" cy="6" r="4" stroke="white" stroke-width="1.5"/>
+        <circle cx="6" cy="6" r="1.5" fill="white"/>
+      </svg>
+    </span>
+    my assistant
+  </a>
+  <a href="https://github.com/nandanadileep/Alexa-LLM" class="nav-link" target="_blank">GitHub →</a>
+</nav>
+
+<section class="hero">
+  <div class="badge">
+    <span class="badge-dot"></span>
+    For Amazon Alexa
+  </div>
+  <h1>Your Alexa,<br><span class="dim">finally</span> smart.</h1>
+  <p class="hero-sub">Ask anything. Get real answers. Have actual conversations — through the Alexa device you already own.</p>
+  <div class="cta-row">
+    <a href="#setup" class="btn btn-dark">Get started</a>
+    <a href="#features" class="btn btn-ghost">See what it does</a>
+  </div>
+</section>
+
+<div class="demo-wrap">
+  <div class="demo-card">
+    <div class="demo-bar">
+      <span class="dot dot-r"></span>
+      <span class="dot dot-y"></span>
+      <span class="dot dot-g"></span>
+    </div>
+    <div class="demo-body">
+      <div class="msg">
+        <span class="msg-who">You</span>
+        <span class="msg-text">Alexa, ask my assistant — what's the difference between stoicism and minimalism?</span>
+      </div>
+      <div class="msg-divider"></div>
+      <div class="msg">
+        <span class="msg-who">Assistant</span>
+        <span class="msg-text">Stoicism is about how you respond to the world — staying grounded regardless of what happens. Minimalism is about what you own and how you structure your environment. They overlap in rejecting excess, but one's a mindset, the other's a lifestyle.</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<section class="section" id="features">
+  <p class="eyebrow">Features</p>
+  <div class="features">
+    <div class="feat">
+      <div class="feat-glyph">◎</div>
+      <h3>Actually answers you</h3>
+      <p>Powered by Gemini, Groq, or any LLM you choose. Not canned responses — real, reasoned answers to whatever you ask.</p>
+    </div>
+    <div class="feat">
+      <div class="feat-glyph">↺</div>
+      <h3>Remembers the conversation</h3>
+      <p>Context carries through the session. Say yes or no, ask a follow-up — it knows exactly what you're referring to.</p>
+    </div>
+    <div class="feat">
+      <div class="feat-glyph">◈</div>
+      <h3>Knows who you are</h3>
+      <p>Tell it once — your job, preferences, goals. It stores that and uses it only when relevant, not constantly.</p>
+    </div>
+    <div class="feat">
+      <div class="feat-glyph">⇄</div>
+      <h3>Swap any model</h3>
+      <p>Switch between Gemini, Groq, or OpenRouter with one environment variable. No code changes ever needed.</p>
+    </div>
+    <div class="feat">
+      <div class="feat-glyph">◻</div>
+      <h3>Built for voice</h3>
+      <p>Responses are tuned to be spoken aloud — concise, complete, no markdown or bullet points read out awkwardly.</p>
+    </div>
+    <div class="feat">
+      <div class="feat-glyph">⊕</div>
+      <h3>Costs nothing</h3>
+      <p>AWS Lambda free tier covers typical personal use. All supported LLM providers have free tiers. Roughly $0/month.</p>
+    </div>
+  </div>
+</section>
+
+<section class="section" id="setup">
+  <p class="eyebrow">Setup guide</p>
+  <div class="steps">
+    <div class="step">
+      <div class="step-n">01</div>
+      <div class="step-body">
+        <h3>Enable the skill</h3>
+        <p>Open the Alexa app → Skills &amp; Games → search <code>my assistant</code> → Enable. That's the only step in the app.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-n">02</div>
+      <div class="step-body">
+        <h3>Say hello</h3>
+        <p>Say <code>Alexa, open my assistant</code> to your device. It'll greet you and ask what you'd like to be called — just answer naturally.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-n">03</div>
+      <div class="step-body">
+        <h3>Ask anything</h3>
+        <p>Start talking. Say <code>Alexa, ask my assistant</code> followed by whatever's on your mind — questions, ideas, things to think through.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-n">04</div>
+      <div class="step-body">
+        <h3>Give it your context (optional)</h3>
+        <p>Tell it something once — like <code>remember that I'm a nurse who prefers plain language</code> — and it'll use that when it's actually helpful.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-n">05</div>
+      <div class="step-body">
+        <h3>Reset anytime</h3>
+        <p>Say <code>forget my context</code> or <code>clear my profile</code> to wipe anything stored and start completely fresh.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <span>my assistant</span>
+  <a href="https://github.com/nandanadileep/Alexa-LLM" target="_blank">View on GitHub</a>
+</footer>
+
+</body>
+</html>
