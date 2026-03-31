@@ -1,7 +1,7 @@
 {
   "interactionModel": {
     "languageModel": {
-      "invocationName": "kimi",
+      "invocationName": "kimi ai",
       "intents": [
         {
           "name": "AskClaudeIntent",
