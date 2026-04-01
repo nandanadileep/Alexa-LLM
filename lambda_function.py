@@ -96,7 +96,8 @@ def handle_yes_no_intent(event, word):
             {"role": "assistant", "content": llm_response},
         ]
         save_history(user_id, updated_history)
-        return build_response(llm_response)
+        should_end = word == "no"
+        return build_response(llm_response, should_end=should_end)
     except Exception as e:
         print(f"Error calling LLM: {e}")
         return build_response("Sorry, I had trouble getting a response. Please try again in a moment.")
