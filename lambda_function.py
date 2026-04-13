@@ -10,6 +10,7 @@ import json
 import os
 
 from dynamo import get_history, save_history, get_user_context, save_user_context, clear_user_context
+from voice_processor import to_voice
 
 LLM_PROVIDER = os.environ.get("LLM_PROVIDER", "groq").lower()
 
@@ -75,7 +76,7 @@ def handle_ask_intent(event):
         ]
         save_history(user_id, updated_history)
 
-        return build_response(llm_response)
+        return build_response(to_voice(llm_response))
 
     except Exception as e:
         print(f"Error calling LLM: {e}")
@@ -97,7 +98,7 @@ def handle_yes_no_intent(event, word):
         ]
         save_history(user_id, updated_history)
         should_end = word == "no"
-        return build_response(llm_response, should_end=should_end)
+        return build_response(to_voice(llm_response), should_end=should_end)
     except Exception as e:
         print(f"Error calling LLM: {e}")
         return build_response("Sorry, I had trouble getting a response. Please try again in a moment.")
