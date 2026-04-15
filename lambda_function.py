@@ -9,8 +9,12 @@ Set the LLM_PROVIDER environment variable to switch backends:
 import json
 import os
 
-from dynamo import get_history, save_history, get_user_context, save_user_context, clear_user_context
-from voice_processor import to_voice
+from dynamo import (
+    get_history, save_history,
+    get_user_context, save_user_context, clear_user_context,
+    get_pending_chunks, save_pending_chunks, clear_pending_chunks,
+)
+from voice_processor import to_voice, chunk_text
 
 LLM_PROVIDER = os.environ.get("LLM_PROVIDER", "groq").lower()
 
@@ -76,13 +80,39 @@ def handle_ask_intent(event):
         ]
         save_history(user_id, updated_history)
 
-        return build_response(to_voice(llm_response))
+        chunks = chunk_text(to_voice(llm_response))
+        if len(chunks) == 1:
+            clear_pending_chunks(user_id)
+            return build_response(chunks[0])
+
+        save_pending_chunks(user_id, chunks[1:])
+        return build_response(
+            chunks[0] + " ... Want me to continue?",
+        )
 
     except Exception as e:
         print(f"Error calling LLM: {e}")
         return build_response(
             "Sorry, I had trouble getting a response. Please try again in a moment."
         )
+
+
+def handle_continue_intent(event):
+    user_id = event["session"]["user"]["userId"]
+    chunks = get_pending_chunks(user_id)
+
+    if not chunks:
+        return build_response("There's nothing more to continue. Feel free to ask me something else.")
+
+    current = chunks[0]
+    remaining = chunks[1:]
+
+    if remaining:
+        save_pending_chunks(user_id, remaining)
+        return build_response(current + " ... Want me to continue?")
+
+    clear_pending_chunks(user_id)
+    return build_response(current)
 
 
 def handle_yes_no_intent(event, word):
@@ -167,14 +197,18 @@ def lambda_handler(event, context):
 
         if intent_name == "AskClaudeIntent":
             return handle_ask_intent(event)
+        elif intent_name == "ContinueIntent":
+            return handle_continue_intent(event)
         elif intent_name == "SetContextIntent":
             return handle_set_context_intent(event)
         elif intent_name == "ClearContextIntent":
             return handle_clear_context_intent(event)
         elif intent_name == "AMAZON.YesIntent":
-            return handle_yes_no_intent(event, "yes")
+            return handle_continue_intent(event)
         elif intent_name == "AMAZON.NoIntent":
-            return handle_yes_no_intent(event, "no")
+            user_id = event["session"]["user"]["userId"]
+            clear_pending_chunks(user_id)
+            return build_response("Alright, let me know if you have another question.", should_end=False)
         elif intent_name == "AMAZON.HelpIntent":
             return handle_help_intent()
         elif intent_name in ("AMAZON.StopIntent", "AMAZON.CancelIntent"):

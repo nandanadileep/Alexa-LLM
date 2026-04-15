@@ -1749,6 +1749,21 @@
           ]
         },
         {
+          "name": "ContinueIntent",
+          "samples": [
+            "continue",
+            "yes continue",
+            "keep going",
+            "go on",
+            "tell me more",
+            "more",
+            "next",
+            "yes please continue",
+            "continue please",
+            "go ahead"
+          ]
+        },
+        {
           "name": "AMAZON.YesIntent",
           "samples": []
         },

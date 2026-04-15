@@ -43,3 +43,23 @@ def clear_user_context(user_id):
         Key={"userId": user_id},
         UpdateExpression="REMOVE userContext",
     )
+
+
+def get_pending_chunks(user_id):
+    response = _get_table().get_item(Key={"userId": user_id})
+    return response.get("Item", {}).get("pendingChunks", [])
+
+
+def save_pending_chunks(user_id, chunks):
+    _get_table().update_item(
+        Key={"userId": user_id},
+        UpdateExpression="SET pendingChunks = :c",
+        ExpressionAttributeValues={":c": chunks},
+    )
+
+
+def clear_pending_chunks(user_id):
+    _get_table().update_item(
+        Key={"userId": user_id},
+        UpdateExpression="REMOVE pendingChunks",
+    )
