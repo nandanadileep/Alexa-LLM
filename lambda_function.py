@@ -15,15 +15,7 @@ from dynamo import (
     get_pending_chunks, save_pending_chunks, clear_pending_chunks,
 )
 from voice_processor import to_voice, chunk_text
-
-LLM_PROVIDER = os.environ.get("LLM_PROVIDER", "groq").lower()
-
-if LLM_PROVIDER == "gemini":
-    from gemini_provider import ask_llm
-elif LLM_PROVIDER == "openrouter":
-    from openrouter_provider import ask_llm
-else:
-    from groq_provider import ask_llm
+from llm_caller import call_llm
 
 
 # ─── Alexa Response Builders ────────────────────────────────────────
@@ -72,7 +64,7 @@ def handle_ask_intent(event):
     user_context = get_user_context(user_id)
 
     try:
-        llm_response = ask_llm(user_query, conversation_history, user_context)
+        llm_response = call_llm(user_query, conversation_history, user_context)
 
         updated_history = conversation_history + [
             {"role": "user", "content": user_query},
@@ -121,7 +113,7 @@ def handle_yes_no_intent(event, word):
     user_context = get_user_context(user_id)
 
     try:
-        llm_response = ask_llm(word, conversation_history, user_context)
+        llm_response = call_llm(word, conversation_history, user_context)
         updated_history = conversation_history + [
             {"role": "user", "content": word},
             {"role": "assistant", "content": llm_response},
