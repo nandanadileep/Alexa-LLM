@@ -1009,7 +1009,7 @@ class TestOpenRouterProvider(unittest.TestCase):
 # 16. VoiceProcessor
 # ══════════════════════════════════════════════════════════════════════════════
 
-from voice_processor import to_voice
+from voice_processor import to_voice, chunk_text
 
 
 class TestVoiceProcessor(unittest.TestCase):
@@ -1196,10 +1196,11 @@ class TestVoiceProcessor(unittest.TestCase):
 
     # ── processor applied in lambda ───────────────────────────────
 
+    @patch("lambda_function.clear_pending_chunks")
     @patch("lambda_function.get_user_context", return_value="")
     @patch("lambda_function.save_history")
     @patch("lambda_function.get_history", return_value=[])
-    @patch("lambda_function.ask_llm", return_value="**Key point:** Use `print()` to debug.")
+    @patch("lambda_function.call_llm", return_value="**Key point:** Use `print()` to debug.")
     def test_processor_applied_to_ask_intent(self, mock_llm, *_):
         event = make_event("IntentRequest", intent_name="AskClaudeIntent", query="how do I debug")
         r = lambda_function.lambda_handler(event, None)
@@ -1208,6 +1209,135 @@ class TestVoiceProcessor(unittest.TestCase):
         self.assertNotIn("`", speech)
         self.assertIn("Key point", speech)
         self.assertIn("print()", speech)
+
+    # ── remaining abbreviations ───────────────────────────────────────────
+
+    def test_mr_expanded(self):
+        result = to_voice("Mr. Jones called.")
+        self.assertIn("Mister Jones", result)
+        self.assertNotIn("Mr.", result)
+
+    def test_mrs_expanded(self):
+        result = to_voice("Mrs. Smith arrived.")
+        self.assertIn("Missus Smith", result)
+        self.assertNotIn("Mrs.", result)
+
+    def test_ms_expanded(self):
+        result = to_voice("Ms. Lee is here.")
+        self.assertIn("Miss Lee", result)
+        self.assertNotIn("Ms.", result)
+
+    def test_prof_expanded(self):
+        result = to_voice("Prof. Adams teaches here.")
+        self.assertIn("Professor Adams", result)
+        self.assertNotIn("Prof.", result)
+
+    def test_approx_expanded(self):
+        result = to_voice("It takes approx. 10 minutes.")
+        self.assertIn("approximately", result)
+        self.assertNotIn("approx.", result)
+
+    def test_est_expanded(self):
+        result = to_voice("The est. cost is fifty dollars.")
+        self.assertIn("estimated", result)
+        self.assertNotIn("est.", result)
+
+    def test_min_expanded(self):
+        result = to_voice("Wait 5 min. please.")
+        self.assertIn("minutes", result)
+        self.assertNotIn("min.", result)
+
+    def test_max_expanded(self):
+        result = to_voice("The max. value is 100.")
+        self.assertIn("maximum", result)
+        self.assertNotIn("max.", result)
+
+    def test_no_expanded(self):
+        result = to_voice("See item no. 5.")
+        self.assertIn("number", result)
+        self.assertNotIn("no.", result)
+
+    # ── bullet symbol (•) ────────────────────────────────────────────────
+
+    def test_bullet_symbol_list(self):
+        text = "• Apples\n• Bananas\n• Oranges"
+        result = to_voice(text)
+        self.assertNotIn("•", result)
+        self.assertIn("Apples", result)
+        self.assertIn("Bananas", result)
+
+    # ── numbered list edge cases ─────────────────────────────────────────
+
+    def test_numbered_list_beyond_ten_uses_item_n(self):
+        lines = "\n".join(f"{i}. Item {i}" for i in range(1, 12))
+        result = to_voice(lines)
+        # Item 11 should be labelled with the "Item N" fallback prefix
+        self.assertIn("Item 11, Item 11", result)
+
+    def test_numbered_list_followed_by_paragraph(self):
+        text = "Steps:\n1. First step\n2. Second step\n\nDone."
+        result = to_voice(text)
+        self.assertIn("First, First step", result)
+        self.assertIn("Second, Second step", result)
+        self.assertIn("Done", result)
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# 17. ChunkText
+# ══════════════════════════════════════════════════════════════════════════════
+
+class TestChunkText(unittest.TestCase):
+
+    def test_short_text_returns_single_chunk(self):
+        text = "Hello there."
+        self.assertEqual(chunk_text(text), [text])
+
+    def test_empty_string_returns_single_chunk(self):
+        self.assertEqual(chunk_text(""), [""])
+
+    def test_text_exactly_at_limit_is_single_chunk(self):
+        text = "a" * 750
+        self.assertEqual(chunk_text(text, limit=750), [text])
+
+    def test_long_text_splits_into_multiple_chunks(self):
+        text = "a" * 800
+        chunks = chunk_text(text, limit=750)
+        self.assertGreater(len(chunks), 1)
+
+    def test_each_chunk_within_limit(self):
+        text = ("word " * 200).strip()
+        for chunk in chunk_text(text, limit=100):
+            self.assertLessEqual(len(chunk), 100)
+
+    def test_splits_at_sentence_boundary(self):
+        sentence = "This is a sentence. "
+        text = sentence * 40  # well over 750 chars
+        chunks = chunk_text(text)
+        for chunk in chunks:
+            # each chunk should end cleanly, not mid-word
+            self.assertFalse(chunk.endswith(" "))
+
+    def test_no_content_lost(self):
+        words = ["word"] * 300
+        text = " ".join(words)
+        chunks = chunk_text(text, limit=100)
+        rejoined = " ".join(chunks)
+        # every word should still be present
+        self.assertEqual(rejoined.count("word"), 300)
+
+    def test_custom_limit_respected(self):
+        text = "Hello world. " * 10
+        chunks = chunk_text(text, limit=50)
+        for chunk in chunks:
+            self.assertLessEqual(len(chunk), 50)
+
+    def test_single_very_long_word_hard_cuts(self):
+        # No whitespace or sentence boundary — must hard-cut at limit
+        text = "a" * 1600
+        chunks = chunk_text(text, limit=750)
+        self.assertEqual(len(chunks), 3)
+        for chunk in chunks[:-1]:
+            self.assertEqual(len(chunk), 750)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
