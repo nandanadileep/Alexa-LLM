@@ -8,8 +8,8 @@ Set the LLM_PROVIDER environment variable to switch backends:
 
 import json
 import os
-
 import re
+import time
 
 from dynamo import (
     get_history, save_history,
@@ -18,6 +18,7 @@ from dynamo import (
 )
 from voice_processor import to_voice, chunk_text
 from llm_caller import call_llm
+from logger import log_invocation, emit_metrics
 
 
 # ─── User Fact Helpers ──────────────────────────────────────────────
@@ -230,42 +231,55 @@ def handle_fallback():
 def lambda_handler(event, context):
     print(f"Received event: {json.dumps(event, indent=2)}")
 
+    t0 = time.time()
     request_type = event["request"]["type"]
+    user_id = event.get("session", {}).get("user", {}).get("userId", "unknown")
+    intent_name = "LaunchRequest"
+    error = None
 
-    if request_type == "LaunchRequest":
-        return handle_launch_request()
+    try:
+        if request_type == "LaunchRequest":
+            return handle_launch_request()
 
-    elif request_type == "IntentRequest":
-        intent_name = event["request"]["intent"]["name"]
+        elif request_type == "IntentRequest":
+            intent_name = event["request"]["intent"]["name"]
 
-        if intent_name == "AskClaudeIntent":
-            return handle_ask_intent(event)
-        elif intent_name == "ContinueIntent":
-            return handle_continue_intent(event)
-        elif intent_name == "SetContextIntent":
-            return handle_set_context_intent(event)
-        elif intent_name == "RecallContextIntent":
-            return handle_recall_context_intent(event)
-        elif intent_name == "ClearContextIntent":
-            return handle_clear_context_intent(event)
-        elif intent_name == "AMAZON.YesIntent":
-            return handle_continue_intent(event)
-        elif intent_name == "AMAZON.NoIntent":
-            user_id = event["session"]["user"]["userId"]
-            clear_pending_chunks(user_id)
-            return build_response("Alright, let me know if you have another question.", should_end=False)
-        elif intent_name == "AMAZON.HelpIntent":
-            return handle_help_intent()
-        elif intent_name in ("AMAZON.StopIntent", "AMAZON.CancelIntent"):
-            return handle_stop_intent()
-        elif intent_name == "AMAZON.FallbackIntent":
-            return handle_fallback()
+            if intent_name == "AskClaudeIntent":
+                return handle_ask_intent(event)
+            elif intent_name == "ContinueIntent":
+                return handle_continue_intent(event)
+            elif intent_name == "SetContextIntent":
+                return handle_set_context_intent(event)
+            elif intent_name == "RecallContextIntent":
+                return handle_recall_context_intent(event)
+            elif intent_name == "ClearContextIntent":
+                return handle_clear_context_intent(event)
+            elif intent_name == "AMAZON.YesIntent":
+                return handle_continue_intent(event)
+            elif intent_name == "AMAZON.NoIntent":
+                clear_pending_chunks(user_id)
+                return build_response("Alright, let me know if you have another question.", should_end=False)
+            elif intent_name == "AMAZON.HelpIntent":
+                return handle_help_intent()
+            elif intent_name in ("AMAZON.StopIntent", "AMAZON.CancelIntent"):
+                return handle_stop_intent()
+            elif intent_name == "AMAZON.FallbackIntent":
+                return handle_fallback()
+            else:
+                return handle_fallback()
+
+        elif request_type == "SessionEndedRequest":
+            intent_name = "SessionEndedRequest"
+            print(f"Session ended: {event['request'].get('reason')}")
+            return build_response("", should_end=True)
+
         else:
             return handle_fallback()
 
-    elif request_type == "SessionEndedRequest":
-        print(f"Session ended: {event['request'].get('reason')}")
-        return build_response("", should_end=True)
-
-    else:
-        return handle_fallback()
+    except Exception as e:
+        error = e
+        raise
+    finally:
+        latency_ms = int((time.time() - t0) * 1000)
+        log_invocation(intent_name, user_id, latency_ms, error=error)
+        emit_metrics(intent_name, latency_ms, error=error)

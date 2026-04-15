@@ -1481,6 +1481,112 @@ class TestChunkText(unittest.TestCase):
 
 
 # ══════════════════════════════════════════════════════════════════════════════
+# 18. Logger
+# ══════════════════════════════════════════════════════════════════════════════
+
+import io
+from logger import log_invocation, emit_metrics
+
+
+class TestLogger(unittest.TestCase):
+
+    def _captured_log(self, fn, *args, **kwargs):
+        """Call fn and return all lines printed to stdout."""
+        buf = io.StringIO()
+        with patch("builtins.print", side_effect=lambda s: buf.write(s + "\n")):
+            fn(*args, **kwargs)
+        return [json.loads(line) for line in buf.getvalue().splitlines() if line]
+
+    # ── log_invocation ────────────────────────────────────────────────────
+
+    def test_log_invocation_emits_json(self):
+        lines = self._captured_log(log_invocation, "AskClaudeIntent", "u1", 120)
+        self.assertEqual(len(lines), 1)
+
+    def test_log_invocation_contains_required_fields(self):
+        lines = self._captured_log(log_invocation, "AskClaudeIntent", "u1", 120)
+        entry = lines[0]
+        self.assertEqual(entry["event"], "invocation")
+        self.assertEqual(entry["intent"], "AskClaudeIntent")
+        self.assertEqual(entry["userId"], "u1")
+        self.assertEqual(entry["latency_ms"], 120)
+        self.assertIsNone(entry["error"])
+
+    def test_log_invocation_includes_error_string(self):
+        lines = self._captured_log(log_invocation, "AskClaudeIntent", "u1", 50, error=ValueError("boom"))
+        self.assertIn("boom", lines[0]["error"])
+
+    def test_log_invocation_null_error_when_no_error(self):
+        lines = self._captured_log(log_invocation, "AskClaudeIntent", "u1", 50)
+        self.assertIsNone(lines[0]["error"])
+
+    # ── emit_metrics ──────────────────────────────────────────────────────
+
+    def test_emit_metrics_emits_valid_emf(self):
+        lines = self._captured_log(emit_metrics, "AskClaudeIntent", 200)
+        entry = lines[0]
+        self.assertIn("_aws", entry)
+        self.assertIn("CloudWatchMetrics", entry["_aws"])
+
+    def test_emit_metrics_correct_namespace(self):
+        lines = self._captured_log(emit_metrics, "AskClaudeIntent", 200)
+        ns = lines[0]["_aws"]["CloudWatchMetrics"][0]["Namespace"]
+        self.assertEqual(ns, "AlexaLLM")
+
+    def test_emit_metrics_intent_dimension(self):
+        lines = self._captured_log(emit_metrics, "SetContextIntent", 80)
+        self.assertEqual(lines[0]["Intent"], "SetContextIntent")
+
+    def test_emit_metrics_error_flag_set_on_failure(self):
+        lines = self._captured_log(emit_metrics, "AskClaudeIntent", 50, error=Exception("fail"))
+        self.assertEqual(lines[0]["Errors"], 1)
+
+    def test_emit_metrics_error_flag_zero_on_success(self):
+        lines = self._captured_log(emit_metrics, "AskClaudeIntent", 50)
+        self.assertEqual(lines[0]["Errors"], 0)
+
+    def test_emit_metrics_latency_recorded(self):
+        lines = self._captured_log(emit_metrics, "AskClaudeIntent", 350)
+        self.assertEqual(lines[0]["Latency"], 350)
+
+    # ── handler emits logs ────────────────────────────────────────────────
+
+    @patch("lambda_function.emit_metrics")
+    @patch("lambda_function.log_invocation")
+    @patch("lambda_function.clear_pending_chunks")
+    @patch("lambda_function.get_user_facts", return_value={})
+    @patch("lambda_function.save_history")
+    @patch("lambda_function.get_history", return_value=[])
+    @patch("lambda_function.call_llm", return_value="Answer.")
+    def test_handler_calls_log_invocation(self, mock_llm, mock_gh, mock_sh, mock_guf, mock_cpc, mock_log, mock_emit):
+        event = make_event("IntentRequest", intent_name="AskClaudeIntent", query="test")
+        lambda_function.lambda_handler(event, None)
+        mock_log.assert_called_once()
+        args = mock_log.call_args[0]
+        self.assertEqual(args[0], "AskClaudeIntent")
+
+    @patch("lambda_function.emit_metrics")
+    @patch("lambda_function.log_invocation")
+    @patch("lambda_function.clear_pending_chunks")
+    @patch("lambda_function.get_user_facts", return_value={})
+    @patch("lambda_function.save_history")
+    @patch("lambda_function.get_history", return_value=[])
+    @patch("lambda_function.call_llm", return_value="Answer.")
+    def test_handler_calls_emit_metrics(self, mock_llm, mock_gh, mock_sh, mock_guf, mock_cpc, mock_log, mock_emit):
+        event = make_event("IntentRequest", intent_name="AskClaudeIntent", query="test")
+        lambda_function.lambda_handler(event, None)
+        mock_emit.assert_called_once()
+
+    @patch("lambda_function.emit_metrics")
+    @patch("lambda_function.log_invocation")
+    def test_handler_logs_launch_request(self, mock_log, mock_emit):
+        event = make_event("LaunchRequest")
+        lambda_function.lambda_handler(event, None)
+        mock_log.assert_called_once()
+        self.assertEqual(mock_log.call_args[0][0], "LaunchRequest")
+
+
+# ══════════════════════════════════════════════════════════════════════════════
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
