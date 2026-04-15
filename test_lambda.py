@@ -683,6 +683,63 @@ class TestDynamo(unittest.TestCase):
         call_kwargs = self.mock_table.update_item.call_args[1]
         self.assertEqual(call_kwargs["ExpressionAttributeValues"][":h"], [])
 
+    def test_save_history_writes_ttl(self):
+        import time
+        before = int(time.time())
+        self.dynamo.save_history("u1", [])
+        call_kwargs = self.mock_table.update_item.call_args[1]
+        ttl_value = call_kwargs["ExpressionAttributeValues"][":t"]
+        # TTL should be roughly 7 days from now
+        self.assertGreater(ttl_value, before + 6 * 24 * 3600)
+        self.assertLess(ttl_value, before + 8 * 24 * 3600)
+
+    def test_save_history_prunes_before_writing(self):
+        import dynamo as dyn
+        # Build a history that exceeds MAX_HISTORY_TURNS
+        long_history = []
+        for i in range(dyn.MAX_HISTORY_TURNS + 5):
+            long_history.append({"role": "user", "content": f"q{i}"})
+            long_history.append({"role": "assistant", "content": f"a{i}"})
+        self.dynamo.save_history("u1", long_history)
+        call_kwargs = self.mock_table.update_item.call_args[1]
+        saved = call_kwargs["ExpressionAttributeValues"][":h"]
+        self.assertEqual(len(saved), dyn.MAX_HISTORY_TURNS * 2)
+
+    # ── prune_history ──────────────────────────────────────────────
+
+    def test_prune_history_returns_unchanged_when_within_limit(self):
+        history = [{"role": "user", "content": "hi"}, {"role": "assistant", "content": "hello"}]
+        result = self.dynamo.prune_history(history, max_turns=10)
+        self.assertEqual(result, history)
+
+    def test_prune_history_trims_to_max_turns(self):
+        history = []
+        for i in range(25):
+            history.append({"role": "user", "content": f"q{i}"})
+            history.append({"role": "assistant", "content": f"a{i}"})
+        result = self.dynamo.prune_history(history, max_turns=20)
+        self.assertEqual(len(result), 40)  # 20 turns * 2 messages
+
+    def test_prune_history_keeps_most_recent_turns(self):
+        history = []
+        for i in range(25):
+            history.append({"role": "user", "content": f"q{i}"})
+            history.append({"role": "assistant", "content": f"a{i}"})
+        result = self.dynamo.prune_history(history, max_turns=5)
+        self.assertEqual(result[0]["content"], "q20")
+        self.assertEqual(result[-1]["content"], "a24")
+
+    def test_prune_history_empty_list(self):
+        self.assertEqual(self.dynamo.prune_history([], max_turns=10), [])
+
+    def test_prune_history_exactly_at_limit(self):
+        history = []
+        for i in range(20):
+            history.append({"role": "user", "content": f"q{i}"})
+            history.append({"role": "assistant", "content": f"a{i}"})
+        result = self.dynamo.prune_history(history, max_turns=20)
+        self.assertEqual(len(result), 40)
+
     # ── get_user_facts ─────────────────────────────────────────────
 
     def test_get_user_facts_returns_dict_when_exists(self):
