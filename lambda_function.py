@@ -9,13 +9,51 @@ Set the LLM_PROVIDER environment variable to switch backends:
 import json
 import os
 
+import re
+
 from dynamo import (
     get_history, save_history,
-    get_user_context, save_user_context, clear_user_context,
+    get_user_facts, merge_user_facts, clear_user_facts,
     get_pending_chunks, save_pending_chunks, clear_pending_chunks,
 )
 from voice_processor import to_voice, chunk_text
 from llm_caller import call_llm
+
+
+# ─── User Fact Helpers ──────────────────────────────────────────────
+
+_FACT_PATTERNS = [
+    (r"my name is (.+)",                              "name"),
+    (r"i(?:'m| am) called (.+)",                      "name"),
+    (r"i(?:'m| am) (\d+) years? old",                "age"),
+    (r"my age is (\d+)",                              "age"),
+    (r"i(?:'m| am) from (.+)",                        "location"),
+    (r"i live in (.+)",                               "location"),
+    (r"i(?:'m| am) based in (.+)",                    "location"),
+    (r"i work(?:ing)? as (?:a |an )?(.+)",            "job"),
+    (r"my (?:job|profession|occupation|role) is (.+)", "job"),
+    (r"i(?:'m| am) a(?:n)? (.+)",                    "job"),
+    (r"i prefer (.+)",                                "preference"),
+    (r"i like (.+)",                                  "preference"),
+]
+
+
+def _extract_fact(utterance):
+    text = utterance.strip()
+    # Strip leading "remember [that]" prefix Alexa may pass through
+    text = re.sub(r"^(?:remember\s+(?:that\s+)?)", "", text, flags=re.IGNORECASE)
+    for pattern, key in _FACT_PATTERNS:
+        m = re.match(pattern, text, re.IGNORECASE)
+        if m:
+            value = m.group(1).strip().rstrip(".,!?")
+            return {key: value}
+    return {"note": text.strip()}
+
+
+def _format_facts(facts):
+    if not facts:
+        return ""
+    return "; ".join(f"{k}: {v}" for k, v in facts.items())
 
 
 # ─── Alexa Response Builders ────────────────────────────────────────
@@ -61,7 +99,7 @@ def handle_ask_intent(event):
 
     user_id = event["session"]["user"]["userId"]
     conversation_history = get_history(user_id)
-    user_context = get_user_context(user_id)
+    user_context = _format_facts(get_user_facts(user_id))
 
     try:
         llm_response = call_llm(user_query, conversation_history, user_context)
@@ -110,7 +148,7 @@ def handle_continue_intent(event):
 def handle_yes_no_intent(event, word):
     user_id = event["session"]["user"]["userId"]
     conversation_history = get_history(user_id)
-    user_context = get_user_context(user_id)
+    user_context = _format_facts(get_user_facts(user_id))
 
     try:
         llm_response = call_llm(word, conversation_history, user_context)
@@ -134,14 +172,27 @@ def handle_set_context_intent(event):
         return build_response("I didn't catch that. Try saying something like, remember that I'm a software engineer who prefers short answers.")
 
     user_id = event["session"]["user"]["userId"]
-    save_user_context(user_id, context_text)
-    return build_response(f"Got it. I'll keep that in mind going forward.")
+    fact = _extract_fact(context_text)
+    merge_user_facts(user_id, fact)
+    key, value = next(iter(fact.items()))
+    return build_response(f"Got it. I've noted your {key} as {value}.")
+
+
+def handle_recall_context_intent(event):
+    user_id = event["session"]["user"]["userId"]
+    facts = get_user_facts(user_id)
+
+    if not facts:
+        return build_response("I don't have any information stored about you yet.")
+
+    parts = [f"{k}: {v}" for k, v in facts.items()]
+    return build_response("Here's what I know about you. " + ". ".join(parts) + ".")
 
 
 def handle_clear_context_intent(event):
     user_id = event["session"]["user"]["userId"]
-    clear_user_context(user_id)
-    return build_response("Done. I've cleared your personal context.")
+    clear_user_facts(user_id)
+    return build_response("Done. I've cleared everything I know about you.")
 
 
 def handle_launch_request():
@@ -193,6 +244,8 @@ def lambda_handler(event, context):
             return handle_continue_intent(event)
         elif intent_name == "SetContextIntent":
             return handle_set_context_intent(event)
+        elif intent_name == "RecallContextIntent":
+            return handle_recall_context_intent(event)
         elif intent_name == "ClearContextIntent":
             return handle_clear_context_intent(event)
         elif intent_name == "AMAZON.YesIntent":
