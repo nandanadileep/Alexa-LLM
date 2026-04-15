@@ -1,0 +1,76 @@
+{
+  "widgets": [
+    {
+      "type": "metric",
+      "width": 12,
+      "height": 6,
+      "properties": {
+        "title": "Invocations by Intent",
+        "view": "timeSeries",
+        "stacked": false,
+        "metrics": [
+          ["AlexaLLM", "Invocations", "Intent", "AskClaudeIntent"],
+          ["AlexaLLM", "Invocations", "Intent", "ContinueIntent"],
+          ["AlexaLLM", "Invocations", "Intent", "SetContextIntent"],
+          ["AlexaLLM", "Invocations", "Intent", "RecallContextIntent"],
+          ["AlexaLLM", "Invocations", "Intent", "ClearContextIntent"],
+          ["AlexaLLM", "Invocations", "Intent", "LaunchRequest"]
+        ],
+        "period": 300,
+        "stat": "Sum",
+        "region": "us-east-1"
+      }
+    },
+    {
+      "type": "metric",
+      "width": 12,
+      "height": 6,
+      "properties": {
+        "title": "Average Latency by Intent (ms)",
+        "view": "timeSeries",
+        "stacked": false,
+        "metrics": [
+          ["AlexaLLM", "Latency", "Intent", "AskClaudeIntent"],
+          ["AlexaLLM", "Latency", "Intent", "ContinueIntent"]
+        ],
+        "period": 300,
+        "stat": "Average",
+        "region": "us-east-1"
+      }
+    },
+    {
+      "type": "metric",
+      "width": 12,
+      "height": 6,
+      "properties": {
+        "title": "Error Rate",
+        "view": "timeSeries",
+        "stacked": false,
+        "metrics": [
+          [{"expression": "errors/invocations*100", "label": "Error %", "id": "e"}],
+          ["AlexaLLM", "Errors", "Intent", "AskClaudeIntent", {"id": "errors", "visible": false}],
+          ["AlexaLLM", "Invocations", "Intent", "AskClaudeIntent", {"id": "invocations", "visible": false}]
+        ],
+        "period": 300,
+        "stat": "Sum",
+        "region": "us-east-1",
+        "yAxis": {"left": {"min": 0, "max": 100}}
+      }
+    },
+    {
+      "type": "metric",
+      "width": 12,
+      "height": 6,
+      "properties": {
+        "title": "P99 Latency — AskClaudeIntent (ms)",
+        "view": "timeSeries",
+        "metrics": [
+          ["AlexaLLM", "Latency", "Intent", "AskClaudeIntent"]
+        ],
+        "period": 300,
+        "stat": "p99",
+        "region": "us-east-1"
+      }
+    }
+  ]
+}
