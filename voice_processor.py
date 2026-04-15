@@ -142,6 +142,46 @@ def _collapse_whitespace(text):
     return text.strip()
 
 
+_CHUNK_CHAR_LIMIT = 750
+
+
+def chunk_text(text, limit=_CHUNK_CHAR_LIMIT):
+    """
+    Split text into chunks of at most `limit` characters, breaking on sentence
+    boundaries where possible so each chunk sounds natural when spoken.
+    Returns a list of strings. If the text fits in one chunk, returns a
+    single-element list.
+    """
+    if len(text) <= limit:
+        return [text]
+
+    chunks = []
+    remaining = text
+    while len(remaining) > limit:
+        # Try to break at a sentence boundary within the limit
+        window = remaining[:limit]
+        cut = max(
+            window.rfind(". "),
+            window.rfind("? "),
+            window.rfind("! "),
+        )
+        if cut != -1:
+            cut += 1  # include the punctuation, exclude the space
+        else:
+            # Fall back to the last word boundary
+            cut = window.rfind(" ")
+        if cut <= 0:
+            cut = limit  # hard cut if no boundary found
+
+        chunks.append(remaining[:cut].strip())
+        remaining = remaining[cut:].strip()
+
+    if remaining:
+        chunks.append(remaining)
+
+    return chunks
+
+
 def to_voice(text):
     """Convert LLM output to clean, natural-sounding speech for Alexa."""
     if not text:
