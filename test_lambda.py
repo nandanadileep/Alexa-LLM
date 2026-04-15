@@ -185,72 +185,76 @@ class TestLaunchRequest(unittest.TestCase):
 
 class TestAskIntent(unittest.TestCase):
 
-    @patch("lambda_function.get_user_context", return_value="")
+    @patch("lambda_function.clear_pending_chunks")
+    @patch("lambda_function.get_user_facts", return_value={})
     @patch("lambda_function.save_history")
     @patch("lambda_function.get_history", return_value=[])
-    @patch("lambda_function.ask_llm", return_value="Stoicism is a philosophy of resilience.")
-    def test_success_with_query_slot(self, mock_llm, mock_get, mock_save, mock_ctx):
+    @patch("lambda_function.call_llm", return_value="Stoicism is a philosophy of resilience.")
+    def test_success_with_query_slot(self, mock_llm, mock_get, mock_save, mock_facts, *_):
         event = make_event("IntentRequest", intent_name="AskClaudeIntent", query="what is stoicism")
         r = lambda_function.lambda_handler(event, None)
         self.assertEqual(get_speech(r), "Stoicism is a philosophy of resilience.")
         mock_llm.assert_called_once_with("what is stoicism", [], "")
 
-    @patch("lambda_function.get_user_context", return_value="")
+    @patch("lambda_function.clear_pending_chunks")
+    @patch("lambda_function.get_user_facts", return_value={})
     @patch("lambda_function.save_history")
     @patch("lambda_function.get_history", return_value=[])
-    @patch("lambda_function.ask_llm", return_value="Stoicism is about self-control.")
-    def test_success_with_question_slot(self, mock_llm, mock_get, mock_save, mock_ctx):
+    @patch("lambda_function.call_llm", return_value="Stoicism is about self-control.")
+    def test_success_with_question_slot(self, mock_llm, mock_get, mock_save, mock_facts, *_):
         event = make_event("IntentRequest", intent_name="AskClaudeIntent", question="tell me about stoicism")
         r = lambda_function.lambda_handler(event, None)
         self.assertEqual(get_speech(r), "Stoicism is about self-control.")
         mock_llm.assert_called_once_with("tell me about stoicism", [], "")
 
-    @patch("lambda_function.get_user_context", return_value="")
+    @patch("lambda_function.get_user_facts", return_value={})
     @patch("lambda_function.save_history")
     @patch("lambda_function.get_history", return_value=[])
-    def test_no_query_returns_prompt(self, mock_get, mock_save, mock_ctx):
+    def test_no_query_returns_prompt(self, mock_get, mock_save, *_):
         event = make_event("IntentRequest", intent_name="AskClaudeIntent")
         r = lambda_function.lambda_handler(event, None)
         self.assertIn("didn't catch", get_speech(r))
         mock_save.assert_not_called()
 
-    @patch("lambda_function.get_user_context", return_value="")
+    @patch("lambda_function.get_user_facts", return_value={})
     @patch("lambda_function.save_history")
     @patch("lambda_function.get_history", return_value=[])
-    @patch("lambda_function.ask_llm", side_effect=Exception("API timeout"))
-    def test_llm_failure_returns_error_message(self, mock_llm, mock_get, mock_save, mock_ctx):
+    @patch("lambda_function.call_llm", side_effect=Exception("API timeout"))
+    def test_llm_failure_returns_error_message(self, *_):
         event = make_event("IntentRequest", intent_name="AskClaudeIntent", query="hello")
         r = lambda_function.lambda_handler(event, None)
         self.assertIn("trouble", get_speech(r))
 
-    @patch("lambda_function.get_user_context", return_value="")
+    @patch("lambda_function.get_user_facts", return_value={})
     @patch("lambda_function.save_history")
     @patch("lambda_function.get_history", return_value=[])
-    @patch("lambda_function.ask_llm", side_effect=Exception("API timeout"))
-    def test_llm_failure_does_not_save_history(self, mock_llm, mock_get, mock_save, mock_ctx):
+    @patch("lambda_function.call_llm", side_effect=Exception("API timeout"))
+    def test_llm_failure_does_not_save_history(self, mock_llm, mock_get, mock_save, *_):
         event = make_event("IntentRequest", intent_name="AskClaudeIntent", query="hello")
         lambda_function.lambda_handler(event, None)
         mock_save.assert_not_called()
 
-    @patch("lambda_function.get_user_context", return_value="")
+    @patch("lambda_function.clear_pending_chunks")
+    @patch("lambda_function.get_user_facts", return_value={})
     @patch("lambda_function.save_history")
     @patch("lambda_function.get_history", return_value=[
         {"role": "user", "content": "what is stoicism"},
         {"role": "assistant", "content": "Stoicism is a philosophy."},
     ])
-    @patch("lambda_function.ask_llm", return_value="Epictetus was a Stoic philosopher.")
-    def test_history_passed_to_llm(self, mock_llm, mock_get, mock_save, mock_ctx):
+    @patch("lambda_function.call_llm", return_value="Epictetus was a Stoic philosopher.")
+    def test_history_passed_to_llm(self, mock_llm, mock_get, mock_save, *_):
         event = make_event("IntentRequest", intent_name="AskClaudeIntent", query="who is epictetus")
         lambda_function.lambda_handler(event, None)
         _, history_arg, _ = mock_llm.call_args[0]
         self.assertEqual(len(history_arg), 2)
         self.assertEqual(history_arg[0]["role"], "user")
 
-    @patch("lambda_function.get_user_context", return_value="")
+    @patch("lambda_function.clear_pending_chunks")
+    @patch("lambda_function.get_user_facts", return_value={})
     @patch("lambda_function.save_history")
     @patch("lambda_function.get_history", return_value=[])
-    @patch("lambda_function.ask_llm", return_value="Sure.")
-    def test_history_updated_with_new_turn(self, mock_llm, mock_get, mock_save, mock_ctx):
+    @patch("lambda_function.call_llm", return_value="Sure.")
+    def test_history_updated_with_new_turn(self, mock_llm, mock_get, mock_save, *_):
         event = make_event("IntentRequest", intent_name="AskClaudeIntent", query="test question")
         lambda_function.lambda_handler(event, None)
         saved_history = mock_save.call_args[0][1]
@@ -260,43 +264,47 @@ class TestAskIntent(unittest.TestCase):
         self.assertEqual(saved_history[1]["role"], "assistant")
         self.assertEqual(saved_history[1]["content"], "Sure.")
 
-    @patch("lambda_function.get_user_context", return_value="I am a software engineer")
+    @patch("lambda_function.clear_pending_chunks")
+    @patch("lambda_function.get_user_facts", return_value={"job": "software engineer"})
     @patch("lambda_function.save_history")
     @patch("lambda_function.get_history", return_value=[])
-    @patch("lambda_function.ask_llm", return_value="Tailored answer.")
-    def test_user_context_passed_to_llm(self, mock_llm, mock_get, mock_save, mock_ctx):
+    @patch("lambda_function.call_llm", return_value="Tailored answer.")
+    def test_user_facts_formatted_and_passed_to_llm(self, mock_llm, *_):
         event = make_event("IntentRequest", intent_name="AskClaudeIntent", query="help me debug")
         lambda_function.lambda_handler(event, None)
         _, _, context_arg = mock_llm.call_args[0]
-        self.assertEqual(context_arg, "I am a software engineer")
+        self.assertEqual(context_arg, "job: software engineer")
 
-    @patch("lambda_function.get_user_context", return_value="")
+    @patch("lambda_function.clear_pending_chunks")
+    @patch("lambda_function.get_user_facts", return_value={})
     @patch("lambda_function.save_history")
     @patch("lambda_function.get_history", return_value=[])
-    @patch("lambda_function.ask_llm", return_value="Answer.")
-    def test_correct_user_id_used(self, mock_llm, mock_get, mock_save, mock_ctx):
+    @patch("lambda_function.call_llm", return_value="Answer.")
+    def test_correct_user_id_used(self, mock_llm, mock_get, mock_save, *_):
         event = make_event("IntentRequest", intent_name="AskClaudeIntent", query="q", user_id="user-xyz")
         lambda_function.lambda_handler(event, None)
         mock_get.assert_called_once_with("user-xyz")
         mock_save.assert_called_once_with("user-xyz", unittest.mock.ANY)
 
-    @patch("lambda_function.get_user_context", return_value="")
+    @patch("lambda_function.clear_pending_chunks")
+    @patch("lambda_function.get_user_facts", return_value={})
     @patch("lambda_function.save_history")
     @patch("lambda_function.get_history", return_value=[])
-    @patch("lambda_function.ask_llm", return_value="OK.")
-    def test_session_stays_open_after_answer(self, mock_llm, mock_get, mock_save, mock_ctx):
+    @patch("lambda_function.call_llm", return_value="OK.")
+    def test_session_stays_open_after_answer(self, *_):
         event = make_event("IntentRequest", intent_name="AskClaudeIntent", query="anything")
         r = lambda_function.lambda_handler(event, None)
         self.assertFalse(r["response"]["shouldEndSession"])
 
-    @patch("lambda_function.get_user_context", return_value="")
+    @patch("lambda_function.clear_pending_chunks")
+    @patch("lambda_function.get_user_facts", return_value={})
     @patch("lambda_function.save_history")
     @patch("lambda_function.get_history", return_value=[
         {"role": "user", "content": "msg"},
         {"role": "assistant", "content": "reply"},
     ] * 10)
-    @patch("lambda_function.ask_llm", return_value="OK.")
-    def test_long_history_still_works(self, mock_llm, mock_get, mock_save, mock_ctx):
+    @patch("lambda_function.call_llm", return_value="OK.")
+    def test_long_history_still_works(self, *_):
         event = make_event("IntentRequest", intent_name="AskClaudeIntent", query="latest question")
         r = lambda_function.lambda_handler(event, None)
         self.assertEqual(get_speech(r), "OK.")
@@ -307,63 +315,47 @@ class TestAskIntent(unittest.TestCase):
 # ══════════════════════════════════════════════════════════════════════════════
 
 class TestYesNoIntent(unittest.TestCase):
+    # YesIntent → handle_continue_intent (delivers next pending chunk)
+    # NoIntent  → clears pending chunks, keeps session open
 
-    @patch("lambda_function.get_user_context", return_value="")
-    @patch("lambda_function.save_history")
-    @patch("lambda_function.get_history", return_value=[])
-    @patch("lambda_function.ask_llm", return_value="Great, let me continue.")
-    def test_yes_keeps_session_open(self, mock_llm, mock_get, mock_save, mock_ctx):
+    @patch("lambda_function.save_pending_chunks")
+    @patch("lambda_function.get_pending_chunks", return_value=["Part two.", "Part three."])
+    def test_yes_delivers_next_chunk(self, *_):
         event = make_event("IntentRequest", intent_name="AMAZON.YesIntent")
+        r = lambda_function.lambda_handler(event, None)
+        self.assertIn("Part two", get_speech(r))
+
+    @patch("lambda_function.save_pending_chunks")
+    @patch("lambda_function.get_pending_chunks", return_value=["Part two.", "Part three."])
+    def test_yes_prompts_to_continue_when_more_chunks_remain(self, *_):
+        event = make_event("IntentRequest", intent_name="AMAZON.YesIntent")
+        r = lambda_function.lambda_handler(event, None)
+        self.assertIn("continue", get_speech(r).lower())
+
+    @patch("lambda_function.clear_pending_chunks")
+    @patch("lambda_function.get_pending_chunks", return_value=["Last part."])
+    def test_yes_no_continue_prompt_on_last_chunk(self, *_):
+        event = make_event("IntentRequest", intent_name="AMAZON.YesIntent")
+        r = lambda_function.lambda_handler(event, None)
+        self.assertNotIn("continue", get_speech(r).lower())
+
+    @patch("lambda_function.get_pending_chunks", return_value=[])
+    def test_yes_with_no_pending_chunks_returns_graceful_message(self, *_):
+        event = make_event("IntentRequest", intent_name="AMAZON.YesIntent")
+        r = lambda_function.lambda_handler(event, None)
+        self.assertIn("nothing more", get_speech(r).lower())
+
+    @patch("lambda_function.clear_pending_chunks")
+    def test_no_clears_pending_chunks(self, mock_clear):
+        event = make_event("IntentRequest", intent_name="AMAZON.NoIntent", user_id="u1")
+        lambda_function.lambda_handler(event, None)
+        mock_clear.assert_called_once_with("u1")
+
+    @patch("lambda_function.clear_pending_chunks")
+    def test_no_keeps_session_open(self, *_):
+        event = make_event("IntentRequest", intent_name="AMAZON.NoIntent")
         r = lambda_function.lambda_handler(event, None)
         self.assertFalse(r["response"]["shouldEndSession"])
-
-    @patch("lambda_function.get_user_context", return_value="")
-    @patch("lambda_function.save_history")
-    @patch("lambda_function.get_history", return_value=[])
-    @patch("lambda_function.ask_llm", return_value="Alright, goodbye.")
-    def test_no_ends_session(self, mock_llm, mock_get, mock_save, mock_ctx):
-        event = make_event("IntentRequest", intent_name="AMAZON.NoIntent")
-        r = lambda_function.lambda_handler(event, None)
-        self.assertTrue(r["response"]["shouldEndSession"])
-
-    @patch("lambda_function.get_user_context", return_value="")
-    @patch("lambda_function.save_history")
-    @patch("lambda_function.get_history", return_value=[])
-    @patch("lambda_function.ask_llm", return_value="Sure.")
-    def test_yes_sends_word_yes_to_llm(self, mock_llm, mock_get, mock_save, mock_ctx):
-        event = make_event("IntentRequest", intent_name="AMAZON.YesIntent")
-        lambda_function.lambda_handler(event, None)
-        self.assertEqual(mock_llm.call_args[0][0], "yes")
-
-    @patch("lambda_function.get_user_context", return_value="")
-    @patch("lambda_function.save_history")
-    @patch("lambda_function.get_history", return_value=[])
-    @patch("lambda_function.ask_llm", return_value="Goodbye.")
-    def test_no_sends_word_no_to_llm(self, mock_llm, mock_get, mock_save, mock_ctx):
-        event = make_event("IntentRequest", intent_name="AMAZON.NoIntent")
-        lambda_function.lambda_handler(event, None)
-        self.assertEqual(mock_llm.call_args[0][0], "no")
-
-    @patch("lambda_function.get_user_context", return_value="")
-    @patch("lambda_function.save_history")
-    @patch("lambda_function.get_history", return_value=[])
-    @patch("lambda_function.ask_llm", side_effect=Exception("timeout"))
-    def test_llm_failure_returns_error(self, mock_llm, mock_get, mock_save, mock_ctx):
-        event = make_event("IntentRequest", intent_name="AMAZON.YesIntent")
-        r = lambda_function.lambda_handler(event, None)
-        self.assertIn("trouble", get_speech(r))
-
-    @patch("lambda_function.get_user_context", return_value="")
-    @patch("lambda_function.save_history")
-    @patch("lambda_function.get_history", return_value=[])
-    @patch("lambda_function.ask_llm", return_value="OK.")
-    def test_history_saved_on_yes(self, mock_llm, mock_get, mock_save, mock_ctx):
-        event = make_event("IntentRequest", intent_name="AMAZON.YesIntent")
-        lambda_function.lambda_handler(event, None)
-        mock_save.assert_called_once()
-        saved = mock_save.call_args[0][1]
-        self.assertEqual(saved[-2]["content"], "yes")
-        self.assertEqual(saved[-1]["content"], "OK.")
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -372,31 +364,66 @@ class TestYesNoIntent(unittest.TestCase):
 
 class TestSetContextIntent(unittest.TestCase):
 
-    @patch("lambda_function.save_user_context")
-    def test_saves_context(self, mock_save):
+    @patch("lambda_function.merge_user_facts")
+    @patch("lambda_function.get_user_facts", return_value={})
+    def test_merges_extracted_fact(self, mock_get, mock_merge):
         event = make_event("IntentRequest", intent_name="SetContextIntent", context_value="I'm a nurse")
         r = lambda_function.lambda_handler(event, None)
-        mock_save.assert_called_once_with("test-user-id", "I'm a nurse")
+        mock_merge.assert_called_once()
         self.assertIn("Got it", get_speech(r))
 
-    @patch("lambda_function.save_user_context")
-    def test_empty_context_slot_returns_prompt(self, mock_save):
+    @patch("lambda_function.merge_user_facts")
+    def test_empty_context_slot_returns_prompt(self, mock_merge):
         event = make_event("IntentRequest", intent_name="SetContextIntent")
         r = lambda_function.lambda_handler(event, None)
-        mock_save.assert_not_called()
+        mock_merge.assert_not_called()
         self.assertIn("didn't catch", get_speech(r))
 
-    @patch("lambda_function.save_user_context")
-    def test_saves_to_correct_user(self, mock_save):
-        event = make_event("IntentRequest", intent_name="SetContextIntent", context_value="context", user_id="user-abc")
+    @patch("lambda_function.merge_user_facts")
+    @patch("lambda_function.get_user_facts", return_value={})
+    def test_saves_to_correct_user(self, mock_get, mock_merge):
+        event = make_event("IntentRequest", intent_name="SetContextIntent", context_value="I'm a pilot", user_id="user-abc")
         lambda_function.lambda_handler(event, None)
-        mock_save.assert_called_once_with("user-abc", "context")
+        self.assertEqual(mock_merge.call_args[0][0], "user-abc")
 
-    @patch("lambda_function.save_user_context")
-    def test_session_stays_open(self, mock_save):
+    @patch("lambda_function.merge_user_facts")
+    @patch("lambda_function.get_user_facts", return_value={})
+    def test_session_stays_open(self, *_):
         event = make_event("IntentRequest", intent_name="SetContextIntent", context_value="I like jazz")
         r = lambda_function.lambda_handler(event, None)
         self.assertFalse(r["response"]["shouldEndSession"])
+
+    @patch("lambda_function.merge_user_facts")
+    @patch("lambda_function.get_user_facts", return_value={})
+    def test_extracts_job_fact(self, mock_get, mock_merge):
+        event = make_event("IntentRequest", intent_name="SetContextIntent", context_value="I'm a software engineer")
+        lambda_function.lambda_handler(event, None)
+        fact = mock_merge.call_args[0][1]
+        self.assertEqual(fact.get("job"), "software engineer")
+
+    @patch("lambda_function.merge_user_facts")
+    @patch("lambda_function.get_user_facts", return_value={})
+    def test_extracts_name_fact(self, mock_get, mock_merge):
+        event = make_event("IntentRequest", intent_name="SetContextIntent", context_value="my name is Nandana")
+        lambda_function.lambda_handler(event, None)
+        fact = mock_merge.call_args[0][1]
+        self.assertEqual(fact.get("name"), "Nandana")
+
+    @patch("lambda_function.merge_user_facts")
+    @patch("lambda_function.get_user_facts", return_value={})
+    def test_extracts_location_fact(self, mock_get, mock_merge):
+        event = make_event("IntentRequest", intent_name="SetContextIntent", context_value="I live in New York")
+        lambda_function.lambda_handler(event, None)
+        fact = mock_merge.call_args[0][1]
+        self.assertEqual(fact.get("location"), "New York")
+
+    @patch("lambda_function.merge_user_facts")
+    @patch("lambda_function.get_user_facts", return_value={})
+    def test_unrecognised_utterance_stored_as_note(self, mock_get, mock_merge):
+        event = make_event("IntentRequest", intent_name="SetContextIntent", context_value="something random")
+        lambda_function.lambda_handler(event, None)
+        fact = mock_merge.call_args[0][1]
+        self.assertIn("note", fact)
 
 
 # ══════════════════════════════════════════════════════════════════════════════
@@ -405,22 +432,57 @@ class TestSetContextIntent(unittest.TestCase):
 
 class TestClearContextIntent(unittest.TestCase):
 
-    @patch("lambda_function.clear_user_context")
-    def test_clears_context(self, mock_clear):
+    @patch("lambda_function.clear_user_facts")
+    def test_clears_all_facts(self, mock_clear):
         event = make_event("IntentRequest", intent_name="ClearContextIntent")
         r = lambda_function.lambda_handler(event, None)
         mock_clear.assert_called_once_with("test-user-id")
         self.assertIn("cleared", get_speech(r))
 
-    @patch("lambda_function.clear_user_context")
+    @patch("lambda_function.clear_user_facts")
     def test_clears_correct_user(self, mock_clear):
         event = make_event("IntentRequest", intent_name="ClearContextIntent", user_id="user-xyz")
         lambda_function.lambda_handler(event, None)
         mock_clear.assert_called_once_with("user-xyz")
 
-    @patch("lambda_function.clear_user_context")
-    def test_session_stays_open(self, mock_clear):
+    @patch("lambda_function.clear_user_facts")
+    def test_session_stays_open(self, *_):
         event = make_event("IntentRequest", intent_name="ClearContextIntent")
+        r = lambda_function.lambda_handler(event, None)
+        self.assertFalse(r["response"]["shouldEndSession"])
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# 6b. RecallContextIntent
+# ══════════════════════════════════════════════════════════════════════════════
+
+class TestRecallContextIntent(unittest.TestCase):
+
+    @patch("lambda_function.get_user_facts", return_value={"name": "Nandana", "job": "engineer"})
+    def test_recalls_stored_facts(self, *_):
+        event = make_event("IntentRequest", intent_name="RecallContextIntent")
+        r = lambda_function.lambda_handler(event, None)
+        speech = get_speech(r)
+        self.assertIn("name", speech)
+        self.assertIn("Nandana", speech)
+        self.assertIn("job", speech)
+        self.assertIn("engineer", speech)
+
+    @patch("lambda_function.get_user_facts", return_value={})
+    def test_no_facts_returns_graceful_message(self, *_):
+        event = make_event("IntentRequest", intent_name="RecallContextIntent")
+        r = lambda_function.lambda_handler(event, None)
+        self.assertIn("don't have any information", get_speech(r))
+
+    @patch("lambda_function.get_user_facts", return_value={"location": "New York"})
+    def test_correct_user_id_used(self, mock_get):
+        event = make_event("IntentRequest", intent_name="RecallContextIntent", user_id="u-recall")
+        lambda_function.lambda_handler(event, None)
+        mock_get.assert_called_once_with("u-recall")
+
+    @patch("lambda_function.get_user_facts", return_value={"name": "Nandana"})
+    def test_session_stays_open(self, *_):
+        event = make_event("IntentRequest", intent_name="RecallContextIntent")
         r = lambda_function.lambda_handler(event, None)
         self.assertFalse(r["response"]["shouldEndSession"])
 
@@ -621,54 +683,75 @@ class TestDynamo(unittest.TestCase):
         call_kwargs = self.mock_table.update_item.call_args[1]
         self.assertEqual(call_kwargs["ExpressionAttributeValues"][":h"], [])
 
-    # ── get_user_context ───────────────────────────────────────────
+    # ── get_user_facts ─────────────────────────────────────────────
 
-    def test_get_user_context_returns_value_when_exists(self):
-        self.mock_table.get_item.return_value = {"Item": {"userId": "u1", "userContext": "I am a chef"}}
-        result = self.dynamo.get_user_context("u1")
-        self.assertEqual(result, "I am a chef")
+    def test_get_user_facts_returns_dict_when_exists(self):
+        self.mock_table.get_item.return_value = {"Item": {"userId": "u1", "userFacts": {"job": "chef"}}}
+        result = self.dynamo.get_user_facts("u1")
+        self.assertEqual(result, {"job": "chef"})
 
-    def test_get_user_context_returns_empty_string_when_no_item(self):
+    def test_get_user_facts_returns_empty_dict_when_no_item(self):
         self.mock_table.get_item.return_value = {}
-        result = self.dynamo.get_user_context("u1")
-        self.assertEqual(result, "")
+        result = self.dynamo.get_user_facts("u1")
+        self.assertEqual(result, {})
 
-    def test_get_user_context_returns_empty_string_when_no_key(self):
+    def test_get_user_facts_returns_empty_dict_when_no_key(self):
         self.mock_table.get_item.return_value = {"Item": {"userId": "u1"}}
-        result = self.dynamo.get_user_context("u1")
-        self.assertEqual(result, "")
+        result = self.dynamo.get_user_facts("u1")
+        self.assertEqual(result, {})
 
-    # ── save_user_context ──────────────────────────────────────────
+    # ── merge_user_facts ───────────────────────────────────────────
 
-    def test_save_user_context_calls_update_item(self):
-        self.dynamo.save_user_context("u1", "I am a pilot")
-        self.mock_table.update_item.assert_called_once()
+    def test_merge_user_facts_merges_with_existing(self):
+        self.mock_table.get_item.return_value = {"Item": {"userId": "u1", "userFacts": {"name": "Alice"}}}
+        self.dynamo.merge_user_facts("u1", {"job": "pilot"})
+        call_kwargs = self.mock_table.update_item.call_args[1]
+        saved = call_kwargs["ExpressionAttributeValues"][":f"]
+        self.assertEqual(saved, {"name": "Alice", "job": "pilot"})
 
-    def test_save_user_context_uses_correct_key(self):
-        self.dynamo.save_user_context("u-xyz", "context")
+    def test_merge_user_facts_uses_correct_user_key(self):
+        self.mock_table.get_item.return_value = {}
+        self.dynamo.merge_user_facts("u-xyz", {"name": "Bob"})
         call_kwargs = self.mock_table.update_item.call_args[1]
         self.assertEqual(call_kwargs["Key"], {"userId": "u-xyz"})
 
-    def test_save_user_context_passes_value(self):
-        self.dynamo.save_user_context("u1", "I like jazz")
+    def test_merge_user_facts_overwrites_same_key(self):
+        self.mock_table.get_item.return_value = {"Item": {"userId": "u1", "userFacts": {"job": "chef"}}}
+        self.dynamo.merge_user_facts("u1", {"job": "pilot"})
         call_kwargs = self.mock_table.update_item.call_args[1]
-        self.assertEqual(call_kwargs["ExpressionAttributeValues"][":c"], "I like jazz")
+        saved = call_kwargs["ExpressionAttributeValues"][":f"]
+        self.assertEqual(saved["job"], "pilot")
 
-    # ── clear_user_context ─────────────────────────────────────────
+    # ── clear_user_facts ───────────────────────────────────────────
 
-    def test_clear_user_context_calls_update_item(self):
-        self.dynamo.clear_user_context("u1")
+    def test_clear_user_facts_calls_update_item(self):
+        self.dynamo.clear_user_facts("u1")
         self.mock_table.update_item.assert_called_once()
 
-    def test_clear_user_context_uses_remove_expression(self):
-        self.dynamo.clear_user_context("u1")
+    def test_clear_user_facts_uses_remove_expression(self):
+        self.dynamo.clear_user_facts("u1")
         call_kwargs = self.mock_table.update_item.call_args[1]
         self.assertIn("REMOVE", call_kwargs["UpdateExpression"])
 
-    def test_clear_user_context_uses_correct_key(self):
-        self.dynamo.clear_user_context("user-abc")
+    def test_clear_user_facts_uses_correct_key(self):
+        self.dynamo.clear_user_facts("user-abc")
         call_kwargs = self.mock_table.update_item.call_args[1]
         self.assertEqual(call_kwargs["Key"], {"userId": "user-abc"})
+
+    # ── clear_user_fact (single key) ──────────────────────────────
+
+    def test_clear_user_fact_removes_specific_key(self):
+        self.mock_table.get_item.return_value = {"Item": {"userId": "u1", "userFacts": {"name": "Alice", "job": "chef"}}}
+        self.dynamo.clear_user_fact("u1", "job")
+        call_kwargs = self.mock_table.update_item.call_args[1]
+        saved = call_kwargs["ExpressionAttributeValues"][":f"]
+        self.assertNotIn("job", saved)
+        self.assertIn("name", saved)
+
+    def test_clear_user_fact_noop_when_key_absent(self):
+        self.mock_table.get_item.return_value = {"Item": {"userId": "u1", "userFacts": {"name": "Alice"}}}
+        self.dynamo.clear_user_fact("u1", "job")
+        self.mock_table.update_item.assert_not_called()
 
     # ── table name resolution ──────────────────────────────────────
 
@@ -1197,7 +1280,7 @@ class TestVoiceProcessor(unittest.TestCase):
     # ── processor applied in lambda ───────────────────────────────
 
     @patch("lambda_function.clear_pending_chunks")
-    @patch("lambda_function.get_user_context", return_value="")
+    @patch("lambda_function.get_user_facts", return_value={})
     @patch("lambda_function.save_history")
     @patch("lambda_function.get_history", return_value=[])
     @patch("lambda_function.call_llm", return_value="**Key point:** Use `print()` to debug.")

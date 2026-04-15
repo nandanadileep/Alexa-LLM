@@ -1732,6 +1732,19 @@
           ]
         },
         {
+          "name": "RecallContextIntent",
+          "samples": [
+            "what do you remember about me",
+            "what do you know about me",
+            "what have I told you",
+            "tell me what you know about me",
+            "recall what you know about me",
+            "what's my profile",
+            "show me my profile",
+            "what information do you have on me"
+          ]
+        },
+        {
           "name": "ClearContextIntent",
           "samples": [
             "forget my context",
